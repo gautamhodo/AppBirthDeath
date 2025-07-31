@@ -29,7 +29,30 @@ const { sql, poolPromise } = require('../db');
 router.get('/', async (req, res) => {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().query('SELECT * FROM IP_Discharge_Summary WHERE IDS_ISDeath_Flag = 1');
+    // const result = await pool.request().query('SELECT * FROM IP_Discharge_Summary WHERE IDS_ISDeath_Flag = 1');
+    // const result = await pool.request().query('SELECT * FROM IP_Discharge_Summary WHERE IDS_ISDeath_Flag = 1');
+    const result = await pool.request().query(`
+      SELECT 
+        IDS.IDS_ID_PK AS deathId,
+        PM.PM_FirstName AS fullName,
+        PM.PM_Sex_FK AS gender,
+        IDS.IDS_Date AS dateOfDeath,
+        IAD.IABD_IP_Num AS ipNo,
+        IDS.IDS_AddedDate AS addedOn
+      FROM 
+        IP_Discharge_Summary IDS
+      JOIN 
+        IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
+      JOIN 
+        PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
+      WHERE 
+        IDS.IDS_ISDeath_Flag = 1
+        ORDER BY 
+      IDS.IDS_AddedDate DESC; 
+    `);
+
+
+
     res.json(result.recordset);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -65,7 +88,24 @@ router.get('/:id', async (req, res) => {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.VarChar, req.params.id)
-      .query('SELECT * FROM IP_Discharge_Summary WHERE IDS_PK = @id AND IDS_ISDeath_Flag = 1');
+      .query(`
+        SELECT 
+          IDS.IDS_ID_PK AS deathId,
+          PM.PM_FirstName AS fullName,
+          PM.PM_Sex_FK AS gender,
+          IDS.IDS_Date AS dateOfDeath,
+          IAD.IABD_IP_Num AS ipNo,
+          IDS.IDS_AddedDate AS addedOn
+        FROM 
+          IP_Discharge_Summary IDS
+        JOIN 
+          IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
+        JOIN 
+          PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
+        WHERE 
+          IDS.IDS_ID_PK = @id AND IDS.IDS_ISDeath_Flag = 1;
+        `);
+    // .query('SELECT * FROM IP_Discharge_Summary WHERE IDS_PK = @id AND IDS_ISDeath_Flag = 1');
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Not found' });
     }
@@ -102,7 +142,7 @@ router.post('/', async (req, res) => {
     Object.keys(data).forEach(key => {
       request.input(key, data[key]);
     });
-    await request.query(`INSERT INTO IP_Discharge_Summary (${Object.keys(data).join(',')}) VALUES (${Object.keys(data).map(k => '@'+k).join(',')})`);
+    await request.query(`INSERT INTO IP_Discharge_Summary (${Object.keys(data).join(',')}) VALUES (${Object.keys(data).map(k => '@' + k).join(',')})`);
     res.status(201).json({ message: 'deathRecords created' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -144,7 +184,7 @@ router.put('/:id', async (req, res) => {
       request.input(key, data[key]);
     });
     request.input('id', req.params.id);
-    await request.query(`UPDATE IP_Discharge_Summary SET ${Object.keys(data).map(k => k+'=@'+k).join(', ')} WHERE IDS_PK=@id`);
+    await request.query(`UPDATE IP_Discharge_Summary SET ${Object.keys(data).map(k => k + '=@' + k).join(', ')} WHERE IDS_PK=@id`);
     res.json({ message: 'deathRecords updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
