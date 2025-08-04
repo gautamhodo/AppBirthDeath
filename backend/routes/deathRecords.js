@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
     const result = await pool.request().query(`
       SELECT 
         IDS.IDS_ID_PK AS deathId,
-        PM.PM_FirstName AS fullName,
+        CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
         PM.PM_Sex_FK AS gender,
         IDS.IDS_Date AS dateOfDeath,
         IAD.IABD_IP_Num AS ipNo,

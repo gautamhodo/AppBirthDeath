@@ -29,9 +29,35 @@ const { sql, poolPromise } = require('../db');
 router.get('/', async (req, res) => {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().query('SELECT * FROM PAT_PatientNewBorn_Master_1');
+    const result = await pool.request().query
+    // ('SELECT * FROM PAT_PatientNewBorn_Master_1');
+    (`
+ SELECT 
+  PNBM.PNBM_Card_FK AS birthId,
+  PNBM.PNBM_Mother_FK AS motherId,
+  'B/O ' + ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS babyName,
+  ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS motherName,
+  Baby.PM_DOB AS dateOfBirth,
+  Baby.PM_Sex_FK AS gender,
+  PNBM.PNBM_PatientAgeDay AS ageInDays,
+  PNBM.PNBM_Weight AS weight,
+  PNBM.PNBM_Length AS length,
+  PNBM.PNBM_HeadCircumference AS headCircumference,
+  PNBM.PNBM_Term AS term,
+  PNBM.PNBM_DeliveryType_FK AS deliveryType,
+  PNBM.PNBM_AddedOn AS addedOn,
+  PNBM.certificateStatus
+FROM 
+  PAT_PatientNewBorn_Master_1 PNBM
+JOIN 
+  PAT_Patient_Master_1 Mother ON PNBM.PNBM_Mother_FK = Mother.PM_Card_PK
+LEFT JOIN 
+  PAT_Patient_Master_1 Baby ON PNBM.PNBM_Card_FK = Baby.PM_Card_PK
+
+`);
+
     res.json(result.recordset);
-  } catch (err) {
+  } catch (err) { 
     res.status(500).json({ error: err.message });
   }
 });
@@ -65,7 +91,7 @@ router.get('/:id', async (req, res) => {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.VarChar, req.params.id)
-      .query('SELECT * FROM birthRecords WHERE id = @id');
+      .query('SELECT * FROM PAT_PatientNewBorn_Master_1 WHERE id = @id');
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Not found' });
     }
@@ -103,7 +129,7 @@ router.post('/', async (req, res) => {
     Object.keys(data).forEach(key => {
       request.input(key, data[key]);
     });
-    await request.query(`INSERT INTO birthRecords (${Object.keys(data).join(',')}) VALUES (${Object.keys(data).map(k => '@'+k).join(',')})`);
+    await request.query(`INSERT INTO PAT_PatientNewBorn_Master_1 (${Object.keys(data).join(',')}) VALUES (${Object.keys(data).map(k => '@'+k).join(',')})`);
     res.status(201).json({ message: 'birthRecords created' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -145,7 +171,7 @@ router.put('/:id', async (req, res) => {
       request.input(key, data[key]);
     });
     request.input('id', req.params.id);
-    await request.query(`UPDATE birthRecords SET ${Object.keys(data).map(k => k+'=@'+k).join(', ')} WHERE id=@id`);
+    await request.query(`UPDATE PAT_PatientNewBorn_Master_1 SET ${Object.keys(data).map(k => k+'=@'+k).join(', ')} WHERE id=@id`);
     res.json({ message: 'birthRecords updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -158,7 +184,7 @@ router.delete('/:id', async (req, res) => {
     const pool = await poolPromise;
     await pool.request()
       .input('id', sql.VarChar, req.params.id)
-      .query('DELETE FROM birthRecords WHERE id = @id');
+      .query('DELETE FROM PAT_PatientNewBorn_Master_1 WHERE id = @id');
     res.json({ message: 'birthRecords deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
