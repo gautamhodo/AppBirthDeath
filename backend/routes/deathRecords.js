@@ -32,24 +32,42 @@ router.get('/', async (req, res) => {
     // const result = await pool.request().query('SELECT * FROM IP_Discharge_Summary WHERE IDS_ISDeath_Flag = 1');
     // const result = await pool.request().query('SELECT * FROM IP_Discharge_Summary WHERE IDS_ISDeath_Flag = 1');
     const result = await pool.request().query(`
-      SELECT 
-        IDS.IDS_ID_PK AS deathId,
-        CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
-        PM.PM_Sex_FK AS gender,
-        IDS.IDS_Date AS dateOfDeath,
-        IAD.IABD_IP_Num AS ipNo,
-        IDS.IDS_AddedDate AS addedOn
-      FROM 
-        IP_Discharge_Summary IDS
-      JOIN 
-        IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
-      JOIN 
-        PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
-      WHERE 
-        IDS.IDS_ISDeath_Flag = 1
-        ORDER BY 
-      IDS.IDS_AddedDate DESC; 
+     SELECT 
+  IAD.IAD_ID_PK AS deathId,
+  CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
+  PM.PM_Sex_FK AS gender,
+  IAD.IAD_Discharge_Date AS dateOfDeath,
+  IAD.IABD_IP_Num AS ipNo,
+  IAD.IAD_AddDate AS addedOn
+FROM 
+  IP_Admission_Details IAD
+JOIN 
+  PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
+WHERE 
+  IAD.IAD_Discharge_Reason = 2
+ORDER BY 
+  IAD.IAD_AddDate DESC;
+
     `);
+    // const result = await pool.request().query(`
+    //   SELECT 
+    //     IDS.IDS_ID_PK AS deathId,
+    //     CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
+    //     PM.PM_Sex_FK AS gender,
+    //     IDS.IDS_Date AS dateOfDeath,
+    //     IAD.IABD_IP_Num AS ipNo,
+    //     IDS.IDS_AddedDate AS addedOn
+    //   FROM 
+    //     IP_Discharge_Summary IDS
+    //   JOIN 
+    //     IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
+    //   JOIN 
+    //     PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
+    //   WHERE 
+    //     IDS.IDS_ISDeath_Flag = 1
+    //     ORDER BY 
+    //   IDS.IDS_AddedDate DESC; 
+    // `);
 
 
 
@@ -89,22 +107,39 @@ router.get('/:id', async (req, res) => {
     const result = await pool.request()
       .input('id', sql.VarChar, req.params.id)
       .query(`
+
         SELECT 
-          IDS.IDS_ID_PK AS deathId,
-          PM.PM_FirstName AS fullName,
-          PM.PM_Sex_FK AS gender,
-          IDS.IDS_Date AS dateOfDeath,
-          IAD.IABD_IP_Num AS ipNo,
-          IDS.IDS_AddedDate AS addedOn
-        FROM 
-          IP_Discharge_Summary IDS
-        JOIN 
-          IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
-        JOIN 
-          PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
-        WHERE 
-          IDS.IDS_ID_PK = @id AND IDS.IDS_ISDeath_Flag = 1;
+        IAD.IAD_ID_PK AS deathId,
+        CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
+        PM.PM_Sex_FK AS gender,
+        IAD.IAD_Discharge_Date AS dateOfDeath,
+        IAD.IABD_IP_Num AS ipNo,
+        IAD.IAD_AddDate AS addedOn
+      FROM 
+        IP_Admission_Details IAD
+      JOIN 
+        PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
+      WHERE 
+        IAD.IAD_ID_PK = @id AND IAD.IAD_Discharge_Reason = 2;
+      
         `);
+      // .query(`
+      //   SELECT 
+      //     IDS.IDS_ID_PK AS deathId,
+      //     PM.PM_FirstName AS fullName,
+      //     PM.PM_Sex_FK AS gender,
+      //     IDS.IDS_Date AS dateOfDeath,
+      //     IAD.IABD_IP_Num AS ipNo,
+      //     IDS.IDS_AddedDate AS addedOn
+      //   FROM 
+      //     IP_Discharge_Summary IDS
+      //   JOIN 
+      //     IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
+      //   JOIN 
+      //     PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
+      //   WHERE 
+      //     IDS.IDS_ID_PK = @id AND IDS.IDS_ISDeath_Flag = 1;
+      //   `);
     // .query('SELECT * FROM IP_Discharge_Summary WHERE IDS_PK = @id AND IDS_ISDeath_Flag = 1');
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Not found' });

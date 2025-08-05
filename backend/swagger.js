@@ -10,7 +10,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:5000',
+        url: 'http://192.168.50.171:5000',
         description: 'Development server',
       },
     ],
