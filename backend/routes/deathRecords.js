@@ -110,8 +110,13 @@ router.get('/:id', async (req, res) => {
 
         SELECT 
         IAD.IAD_ID_PK AS deathId,
+        PM.PM_FirstName AS firstName,
+        PM.PM_MiddleName AS middleName,
+        PM.PM_LastName AS lastName,
         CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
         PM.PM_Sex_FK AS gender,
+        PM.PM_DOB AS dateOfBirth,
+        PM.PM_PrimaryIdentification AS mobileNumber,
         IAD.IAD_Discharge_Date AS dateOfDeath,
         IAD.IABD_IP_Num AS ipNo,
         IAD.IAD_AddDate AS addedOn

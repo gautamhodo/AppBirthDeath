@@ -91,7 +91,29 @@ router.get('/:id', async (req, res) => {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.VarChar, req.params.id)
-      .query('SELECT * FROM PAT_PatientNewBorn_Master_1 WHERE PNBM_Card_FK = @id');
+      // .query('SELECT * FROM PAT_PatientNewBorn_Master_1 WHERE PNBM_Card_FK = @id');
+      .query(`SELECT 
+  PNBM.PNBM_Card_FK AS birthId,
+  PNBM.PNBM_Mother_FK AS motherId,
+  'B/O ' + ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS babyName,
+  ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS motherName,
+  Baby.PM_DOB AS dateOfBirth,
+  Baby.PM_Sex_FK AS gender,
+  PNBM.PNBM_PatientAgeDay AS ageInDays,
+  PNBM.PNBM_Weight AS weight,
+  PNBM.PNBM_Length AS length,
+  PNBM.PNBM_HeadCircumference AS headCircumference,
+  PNBM.PNBM_Term AS term,
+  PNBM.PNBM_DeliveryType_FK AS deliveryType,
+  PNBM.PNBM_AddedOn AS addedOn,
+  PNBM.certificateStatus
+FROM 
+  PAT_PatientNewBorn_Master_1 PNBM
+JOIN 
+  PAT_Patient_Master_1 Mother ON PNBM.PNBM_Mother_FK = Mother.PM_Card_PK
+LEFT JOIN 
+  PAT_Patient_Master_1 Baby ON PNBM.PNBM_Card_FK = Baby.PM_Card_PK
+WHERE PNBM_Card_FK = @id`);
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Not found' });
     }
