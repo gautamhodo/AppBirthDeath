@@ -38,7 +38,9 @@ router.get('/', async (req, res) => {
   'B/O ' + ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS babyName,
   ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS motherName,
   Baby.PM_DOB AS dateOfBirth,
+  Baby.PM_PrimaryIdentification AS mobileNo,
   Baby.PM_Sex_FK AS gender,
+  Baby.PM_BloodGroup AS bloodGroup,
   PNBM.PNBM_PatientAgeDay AS ageInDays,
   PNBM.PNBM_Weight AS weight,
   PNBM.PNBM_Length AS length,
@@ -46,13 +48,23 @@ router.get('/', async (req, res) => {
   PNBM.PNBM_Term AS term,
   PNBM.PNBM_DeliveryType_FK AS deliveryType,
   PNBM.PNBM_AddedOn AS addedOn,
-  PNBM.certificateStatus
+  PNBM.certificateStatus,
+
+  -- Fields from IP_Admission_Details (add more as needed)
+  IAD.IABD_IP_Num AS ipNumber,
+  IAD.IAD_Date AS admittedDate
+
 FROM 
   PAT_PatientNewBorn_Master_1 PNBM
+
 JOIN 
   PAT_Patient_Master_1 Mother ON PNBM.PNBM_Mother_FK = Mother.PM_Card_PK
+
 LEFT JOIN 
   PAT_Patient_Master_1 Baby ON PNBM.PNBM_Card_FK = Baby.PM_Card_PK
+
+LEFT JOIN 
+  IP_Admission_Details IAD ON IAD.IAD_Patient_FK = Baby.PM_Card_PK
 
 `);
 
@@ -92,13 +104,16 @@ router.get('/:id', async (req, res) => {
     const result = await pool.request()
       .input('id', sql.VarChar, req.params.id)
       // .query('SELECT * FROM PAT_PatientNewBorn_Master_1 WHERE PNBM_Card_FK = @id');
-      .query(`SELECT 
+      .query(`
+        SELECT 
   PNBM.PNBM_Card_FK AS birthId,
   PNBM.PNBM_Mother_FK AS motherId,
   'B/O ' + ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS babyName,
   ISNULL(Mother.PM_FirstName, '') + ' ' + ISNULL(Mother.PM_LastName, '') AS motherName,
   Baby.PM_DOB AS dateOfBirth,
   Baby.PM_Sex_FK AS gender,
+  Baby.PM_BloodGroup AS bloodGroup,
+  Baby.PM_PrimaryIdentification AS mobileNo,
   PNBM.PNBM_PatientAgeDay AS ageInDays,
   PNBM.PNBM_Weight AS weight,
   PNBM.PNBM_Length AS length,
@@ -106,13 +121,20 @@ router.get('/:id', async (req, res) => {
   PNBM.PNBM_Term AS term,
   PNBM.PNBM_DeliveryType_FK AS deliveryType,
   PNBM.PNBM_AddedOn AS addedOn,
-  PNBM.certificateStatus
+  PNBM.certificateStatus,
+
+  -- Fields from IP_Admission_Details (add more as needed)
+  IAD.IABD_IP_Num AS ipNumber,
+  IAD.IAD_Date AS admittedDate
+
 FROM 
   PAT_PatientNewBorn_Master_1 PNBM
 JOIN 
   PAT_Patient_Master_1 Mother ON PNBM.PNBM_Mother_FK = Mother.PM_Card_PK
 LEFT JOIN 
   PAT_Patient_Master_1 Baby ON PNBM.PNBM_Card_FK = Baby.PM_Card_PK
+LEFT JOIN 
+  IP_Admission_Details IAD ON IAD.IAD_Patient_FK = Baby.PM_Card_PK
 WHERE PNBM_Card_FK = @id`);
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Not found' });
