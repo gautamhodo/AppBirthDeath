@@ -7,8 +7,24 @@ const swaggerSpec = require('./swagger');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
-app.use(bodyParser.json());
+// Configure CORS to allow requests from any origin
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
+
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+  console.log(`[${timestamp}] ${req.method} ${req.url} - Client: ${clientIP}`);
+  next();
+});
 
 // Serve Swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -36,6 +52,32 @@ app.get('/health', (req, res) => {
   res.json({ status: 'Backend is running' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Test endpoint for network connectivity
+app.get('/test', async (req, res) => {
+  try {
+    const { poolPromise } = require('./db');
+    const pool = await poolPromise;
+    const result = await pool.request().query('SELECT 1 as test');
+    res.json({ 
+      status: 'OK', 
+      message: 'Backend and database are accessible',
+      timestamp: new Date().toISOString(),
+      dbTest: result.recordset[0].test === 1 ? 'PASS' : 'FAIL'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'ERROR', 
+      message: 'Database connection failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
+  console.log(`Server accessible at:`);
+  console.log(`  - Local: http://localhost:${PORT}`);
+  console.log(`  - Network: http://192.168.50.171:${PORT}`);
+  console.log(`  - Test page: Open test-connection.html in browser`);
 }); 
