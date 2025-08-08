@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { sql, poolPromise } = require('../db');
+const deathRecordsController = require('../controllers/deathRecordsController');
 
 /**
  * @swagger
@@ -26,56 +26,7 @@ const { sql, poolPromise } = require('../db');
  *                 $ref: '#/components/schemas/DeathRecord'
  */
 // GET /deathRecords - List all
-router.get('/', async (req, res) => {
-  try {
-    const pool = await poolPromise;
-    // const result = await pool.request().query('SELECT * FROM IP_Discharge_Summary WHERE IDS_ISDeath_Flag = 1');
-    // const result = await pool.request().query('SELECT * FROM IP_Discharge_Summary WHERE IDS_ISDeath_Flag = 1');
-    const result = await pool.request().query(`
-     SELECT 
-  IAD.IAD_ID_PK AS deathId,
-  CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
-  PM.PM_Sex_FK AS gender,
-  IAD.IAD_Discharge_Date AS dateOfDeath,
-  IAD.IABD_IP_Num AS ipNo,
-  IAD.IAD_AddDate AS addedOn
-FROM 
-  IP_Admission_Details IAD
-JOIN 
-  PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
-WHERE 
-  IAD.IAD_Discharge_Reason = 2
-ORDER BY 
-  IAD.IAD_AddDate DESC;
-
-    `);
-    // const result = await pool.request().query(`
-    //   SELECT 
-    //     IDS.IDS_ID_PK AS deathId,
-    //     CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
-    //     PM.PM_Sex_FK AS gender,
-    //     IDS.IDS_Date AS dateOfDeath,
-    //     IAD.IABD_IP_Num AS ipNo,
-    //     IDS.IDS_AddedDate AS addedOn
-    //   FROM 
-    //     IP_Discharge_Summary IDS
-    //   JOIN 
-    //     IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
-    //   JOIN 
-    //     PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
-    //   WHERE 
-    //     IDS.IDS_ISDeath_Flag = 1
-    //     ORDER BY 
-    //   IDS.IDS_AddedDate DESC; 
-    // `);
-
-
-
-    res.json(result.recordset);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/', deathRecordsController.getAll);
 
 /**
  * @swagger
@@ -101,59 +52,7 @@ ORDER BY
  *         description: Death record not found
  */
 // GET /deathRecords/:id - Get by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.VarChar, req.params.id)
-      .query(`
-
-        SELECT 
-        IAD.IAD_ID_PK AS deathId,
-        PM.PM_FirstName AS firstName,
-        PM.PM_MiddleName AS middleName,
-        PM.PM_LastName AS lastName,
-        CONCAT_WS(' ', PM.PM_FirstName, PM.PM_MiddleName, PM.PM_LastName) AS fullName,
-        PM.PM_Sex_FK AS gender,
-        PM.PM_DOB AS dateOfBirth,
-        PM.PM_PrimaryIdentification AS mobileNumber,
-        IAD.IAD_Discharge_Date AS dateOfDeath,
-        IAD.IABD_IP_Num AS ipNo,
-        IAD.IAD_AddDate AS addedOn
-      FROM 
-        IP_Admission_Details IAD
-      JOIN 
-        PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
-      WHERE 
-        IAD.IAD_ID_PK = @id AND IAD.IAD_Discharge_Reason = 2;
-      
-        `);
-      // .query(`
-      //   SELECT 
-      //     IDS.IDS_ID_PK AS deathId,
-      //     PM.PM_FirstName AS fullName,
-      //     PM.PM_Sex_FK AS gender,
-      //     IDS.IDS_Date AS dateOfDeath,
-      //     IAD.IABD_IP_Num AS ipNo,
-      //     IDS.IDS_AddedDate AS addedOn
-      //   FROM 
-      //     IP_Discharge_Summary IDS
-      //   JOIN 
-      //     IP_Admission_Details IAD ON IDS.IDS_Admit_Fk = IAD.IAD_ID_PK
-      //   JOIN 
-      //     PAT_Patient_Master_1 PM ON IAD.IAD_Patient_fk = PM.PM_Card_PK
-      //   WHERE 
-      //     IDS.IDS_ID_PK = @id AND IDS.IDS_ISDeath_Flag = 1;
-      //   `);
-    // .query('SELECT * FROM IP_Discharge_Summary WHERE IDS_PK = @id AND IDS_ISDeath_Flag = 1');
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    res.json(result.recordset[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/:id', deathRecordsController.getById);
 
 /**
  * @swagger
@@ -174,20 +73,7 @@ router.get('/:id', async (req, res) => {
  *         description: Invalid input
  */
 // POST /deathRecords - Create new
-router.post('/', async (req, res) => {
-  try {
-    const pool = await poolPromise;
-    const data = req.body;
-    const request = pool.request();
-    Object.keys(data).forEach(key => {
-      request.input(key, data[key]);
-    });
-    await request.query(`INSERT INTO IP_Discharge_Summary (${Object.keys(data).join(',')}) VALUES (${Object.keys(data).map(k => '@' + k).join(',')})`);
-    res.status(201).json({ message: 'deathRecords created' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.post('/', deathRecordsController.create);
 
 /**
  * @swagger
@@ -215,21 +101,7 @@ router.post('/', async (req, res) => {
  *         description: Death record not found
  */
 // PUT /deathRecords/:id - Update by ID
-router.put('/:id', async (req, res) => {
-  try {
-    const pool = await poolPromise;
-    const data = req.body;
-    const request = pool.request();
-    Object.keys(data).forEach(key => {
-      request.input(key, data[key]);
-    });
-    request.input('id', req.params.id);
-    await request.query(`UPDATE IP_Discharge_Summary SET ${Object.keys(data).map(k => k + '=@' + k).join(', ')} WHERE IDS_PK=@id`);
-    res.json({ message: 'deathRecords updated' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.put('/:id', deathRecordsController.update);
 
 /**
  * @swagger
@@ -251,16 +123,6 @@ router.put('/:id', async (req, res) => {
  *         description: Death record not found
  */
 // DELETE /deathRecords/:id - Delete by ID
-router.delete('/:id', async (req, res) => {
-  try {
-    const pool = await poolPromise;
-    await pool.request()
-      .input('id', sql.VarChar, req.params.id)
-      .query('DELETE FROM IP_Discharge_Summary WHERE IDS_PK = @id');
-    res.json({ message: 'deathRecords deleted' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.delete('/:id', deathRecordsController.delete);
 
 module.exports = router; 
